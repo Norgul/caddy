@@ -1,9 +1,9 @@
 {
-	admin 0.0.0.0:2019
+	admin localhost:2019
 }
 
 caddy.local {
-	reverse_proxy caddy-ui:3080
+	reverse_proxy localhost:3080
 }
 
 mission-control.local {

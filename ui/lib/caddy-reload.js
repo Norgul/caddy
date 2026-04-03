@@ -1,10 +1,13 @@
 const CADDY_ADMIN_URL =
-  process.env.CADDY_ADMIN_URL || "http://caddy:2019";
+  process.env.CADDY_ADMIN_URL || "http://localhost:2019";
 
 async function reloadCaddy(caddyfileContent) {
   const response = await fetch(`${CADDY_ADMIN_URL}/load`, {
     method: "POST",
-    headers: { "Content-Type": "text/caddyfile" },
+    headers: {
+      "Content-Type": "text/caddyfile",
+      "Origin": "http://localhost:2019",
+    },
     body: caddyfileContent,
   });
 

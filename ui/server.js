@@ -2,14 +2,23 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { parseSites, addSite, removeSite } = require("./lib/caddyfile");
-const { addHost, removeHost } = require("./lib/hosts");
 const { reloadCaddy } = require("./lib/caddy-reload");
 
 const app = express();
 const PORT = 3080;
 
 const CADDYFILE_PATH = process.env.CADDYFILE_PATH || "/app/Caddyfile";
-const HOSTS_PATH = process.env.HOSTS_PATH || "/app/hosts";
+const CADDY_HOSTS_PATH = process.env.CADDY_HOSTS_PATH || "/app/caddy-hosts";
+
+// Write a .caddy-hosts file listing all managed domains.
+// A host-side sync script reads this and updates macOS /etc/hosts.
+function writeCaddyHosts(caddyfileContent) {
+  const sites = parseSites(caddyfileContent);
+  const lines = sites
+    .map((s) => `127.0.0.1\t${s.domain} # caddy-local`)
+    .join("\n");
+  fs.writeFileSync(CADDY_HOSTS_PATH, lines + "\n");
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -60,10 +69,8 @@ app.post("/api/sites", async (req, res) => {
     const updatedCaddyfile = addSite(caddyfile, domain, port);
     fs.writeFileSync(CADDYFILE_PATH, updatedCaddyfile);
 
-    // Update /etc/hosts
-    const hosts = fs.readFileSync(HOSTS_PATH, "utf-8");
-    const updatedHosts = addHost(hosts, domain);
-    fs.writeFileSync(HOSTS_PATH, updatedHosts);
+    // Write managed hosts file for sync script
+    writeCaddyHosts(updatedCaddyfile);
 
     // Reload Caddy
     await reloadCaddy(updatedCaddyfile);
@@ -86,10 +93,8 @@ app.delete("/api/sites/:domain", async (req, res) => {
     const updatedCaddyfile = removeSite(caddyfile, domain);
     fs.writeFileSync(CADDYFILE_PATH, updatedCaddyfile);
 
-    // Update /etc/hosts
-    const hosts = fs.readFileSync(HOSTS_PATH, "utf-8");
-    const updatedHosts = removeHost(hosts, domain);
-    fs.writeFileSync(HOSTS_PATH, updatedHosts);
+    // Write managed hosts file for sync script
+    writeCaddyHosts(updatedCaddyfile);
 
     // Reload Caddy
     await reloadCaddy(updatedCaddyfile);

@@ -13,9 +13,10 @@ services:
 
   caddy-ui:
     build: ./ui
+    network_mode: "service:caddy"
     volumes:
       - ./Caddyfile:/app/Caddyfile
-      - /etc/hosts:/app/hosts
+      - ./.caddy-hosts:/app/caddy-hosts
     depends_on:
       - caddy
 
