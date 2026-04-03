@@ -23,7 +23,7 @@ sudo ./install-sync.sh
 docker compose up --build
 ```
 
-The UI is available at [http://caddy.local](http://caddy.local) (or `http://localhost:3080`).
+The UI is available at [https://caddy.local](https://caddy.local) (or `http://localhost:3080`).
 
 ## Usage
 
