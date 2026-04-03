@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const { parseSites, addSite, removeSite } = require("./lib/caddyfile");
+const { parseSites, addSite, removeSite, updateSiteDevMode } = require("./lib/caddyfile");
 const { reloadCaddy } = require("./lib/caddy-reload");
 
 const app = express();
@@ -37,7 +37,7 @@ app.get("/api/sites", (req, res) => {
 // POST /api/sites — add a site
 app.post("/api/sites", async (req, res) => {
   try {
-    let { domain, port } = req.body;
+    let { domain, port, devMode } = req.body;
 
     // Validation
     if (!domain || typeof domain !== "string") {
@@ -66,7 +66,7 @@ app.post("/api/sites", async (req, res) => {
     }
 
     // Update Caddyfile
-    const updatedCaddyfile = addSite(caddyfile, domain, port);
+    const updatedCaddyfile = addSite(caddyfile, domain, port, !!devMode);
     fs.writeFileSync(CADDYFILE_PATH, updatedCaddyfile);
 
     // Write managed hosts file for sync script
@@ -79,6 +79,35 @@ app.post("/api/sites", async (req, res) => {
     const sites = parseSites(updatedCaddyfile);
     res.json(sites);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/sites/:domain — toggle dev server mode
+app.patch("/api/sites/:domain", async (req, res) => {
+  try {
+    const domain = req.params.domain;
+    const { devMode } = req.body;
+
+    if (typeof devMode !== "boolean") {
+      return res.status(400).json({ error: "devMode must be a boolean" });
+    }
+
+    // Update Caddyfile
+    const caddyfile = fs.readFileSync(CADDYFILE_PATH, "utf-8");
+    const updatedCaddyfile = updateSiteDevMode(caddyfile, domain, devMode);
+    fs.writeFileSync(CADDYFILE_PATH, updatedCaddyfile);
+
+    // Reload Caddy
+    await reloadCaddy(updatedCaddyfile);
+
+    // Return updated list
+    const sites = parseSites(updatedCaddyfile);
+    res.json(sites);
+  } catch (err) {
+    if (err.message.includes("system") || err.message.includes("not found")) {
+      return res.status(400).json({ error: err.message });
+    }
     res.status(500).json({ error: err.message });
   }
 });
