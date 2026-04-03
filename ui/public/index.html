@@ -291,10 +291,36 @@
       cursor: pointer;
     }
     .checkbox-label input[type="checkbox"] {
-      accent-color: #8b5cf6;
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
+      display: none;
+    }
+    .checkbox-toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 10px;
+      transition: background 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .checkbox-toggle::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+    .checkbox-label input:checked + .checkbox-toggle {
+      background: rgba(139, 92, 246, 0.4);
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+    .checkbox-label input:checked + .checkbox-toggle::after {
+      transform: translateX(16px);
+      background: rgba(255,255,255,0.9);
     }
     .checkbox-hint {
       font-size: 11px;
@@ -336,6 +362,30 @@
       font-size: 11px;
       color: rgba(255,255,255,0.3);
       white-space: nowrap;
+      cursor: help;
+      position: relative;
+    }
+    .dev-label .tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      width: 220px;
+      padding: 10px 12px;
+      background: rgba(30, 30, 35, 0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      backdrop-filter: blur(20px);
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.5;
+      pointer-events: none;
+      z-index: 10;
+      white-space: normal;
+      word-wrap: break-word;
+    }
+    .dev-label:hover .tooltip {
+      display: block;
     }
 
     /* Footer hint */
@@ -397,6 +447,7 @@
         <div class="add-form-options">
           <label class="checkbox-label">
             <input type="checkbox" id="dev-mode" />
+            <span class="checkbox-toggle"></span>
             Dev server mode
           </label>
           <span class="checkbox-hint">Fixes "Invalid Host header" from webpack, Vite, etc.</span>
@@ -440,7 +491,13 @@
       const count = document.getElementById("sites-count");
       count.textContent = `${sites.length} site${sites.length !== 1 ? "s" : ""}`;
 
-      list.innerHTML = sites.map(site => `
+      const sorted = [...sites].sort((a, b) => {
+        if (a.system && !b.system) return -1;
+        if (!a.system && b.system) return 1;
+        return a.domain.localeCompare(b.domain);
+      });
+
+      list.innerHTML = sorted.map(site => `
         <div class="site-card${site.system ? " system" : ""}">
           <div class="site-info">
             <div class="site-domain">
@@ -452,7 +509,7 @@
           <div class="site-actions">
             ${site.system
               ? '<span class="badge-system">system</span>'
-              : `<span class="dev-label">dev</span>
+              : `<span class="dev-label">dev<span class="tooltip">Passes Host: localhost to the upstream. Fixes "Invalid Host header" from webpack, Vite, and other dev servers.</span></span>
                  <div class="toggle${site.devMode ? " active" : ""}" onclick="toggleDevMode('${site.domain}', ${!site.devMode})"></div>
                  <button class="btn-delete" onclick="deleteSite('${site.domain}')">Delete</button>`
             }

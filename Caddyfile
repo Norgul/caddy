@@ -9,3 +9,9 @@ caddy.local {
 mission-control.local {
 	reverse_proxy host.docker.internal:3333
 }
+
+deepcontext.local {
+	reverse_proxy host.docker.internal:3000 {
+		header_up Host localhost:3000
+	}
+}
