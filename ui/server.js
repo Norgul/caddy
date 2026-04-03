@@ -10,6 +10,18 @@ const PORT = 3080;
 const CADDYFILE_PATH = process.env.CADDYFILE_PATH || "/app/Caddyfile";
 const CADDY_HOSTS_PATH = process.env.CADDY_HOSTS_PATH || "/app/caddy-hosts";
 
+const DEFAULT_CADDYFILE = "{\n\tadmin localhost:2019\n}\n";
+
+if (!fs.existsSync(CADDYFILE_PATH)) {
+  fs.writeFileSync(CADDYFILE_PATH, DEFAULT_CADDYFILE);
+  console.log(`Created default Caddyfile at ${CADDYFILE_PATH}`);
+}
+
+if (!fs.existsSync(CADDY_HOSTS_PATH)) {
+  fs.writeFileSync(CADDY_HOSTS_PATH, "");
+  console.log(`Created empty caddy-hosts at ${CADDY_HOSTS_PATH}`);
+}
+
 // Write a .caddy-hosts file listing all managed domains.
 // A host-side sync script reads this and updates macOS /etc/hosts.
 function writeCaddyHosts(caddyfileContent) {
