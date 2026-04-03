@@ -25,12 +25,30 @@ function parseSites(content) {
     if (siteMatch) {
       const domain = siteMatch[1];
       let port = null;
+      let devMode = false;
       i++;
 
       while (i < lines.length && lines[i].trim() !== "}") {
-        const proxyMatch = lines[i]
-          .trim()
-          .match(/^reverse_proxy\s+[\w._-]+:(\d+)$/);
+        const trimmed = lines[i].trim();
+
+        // Match "reverse_proxy host:port {" (sub-block)
+        const proxyBlockMatch = trimmed.match(/^reverse_proxy\s+[\w._-]+:(\d+)\s*\{$/);
+        if (proxyBlockMatch) {
+          port = parseInt(proxyBlockMatch[1], 10);
+          i++;
+          // Scan sub-block for header_up Host
+          while (i < lines.length && lines[i].trim() !== "}") {
+            if (lines[i].trim().match(/^header_up\s+Host\s+/)) {
+              devMode = true;
+            }
+            i++;
+          }
+          i++; // skip sub-block closing }
+          continue;
+        }
+
+        // Match "reverse_proxy host:port" (flat, no sub-block)
+        const proxyMatch = trimmed.match(/^reverse_proxy\s+[\w._-]+:(\d+)$/);
         if (proxyMatch) {
           port = parseInt(proxyMatch[1], 10);
         }
@@ -38,7 +56,7 @@ function parseSites(content) {
       }
 
       if (port !== null) {
-        const site = { domain, port };
+        const site = { domain, port, devMode };
         if (SYSTEM_DOMAINS.includes(domain)) {
           site.system = true;
         }

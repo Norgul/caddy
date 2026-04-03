@@ -7,7 +7,7 @@ describe("parseSites", () => {
     const content = `mission-control.local {\n\treverse_proxy host.docker.internal:3333\n}\n`;
     const sites = parseSites(content);
     assert.deepStrictEqual(sites, [
-      { domain: "mission-control.local", port: 3333 },
+      { domain: "mission-control.local", port: 3333, devMode: false },
     ]);
   });
 
@@ -23,16 +23,56 @@ describe("parseSites", () => {
     ].join("\n");
     const sites = parseSites(content);
     assert.equal(sites.length, 2);
-    assert.deepStrictEqual(sites[0], { domain: "app.local", port: 3000 });
-    assert.deepStrictEqual(sites[1], { domain: "api.local", port: 8080 });
+    assert.deepStrictEqual(sites[0], { domain: "app.local", port: 3000, devMode: false });
+    assert.deepStrictEqual(sites[1], { domain: "api.local", port: 8080, devMode: false });
   });
 
   it("marks caddy.local as system", () => {
     const content = `caddy.local {\n\treverse_proxy caddy-ui:3080\n}\n`;
     const sites = parseSites(content);
     assert.deepStrictEqual(sites, [
-      { domain: "caddy.local", port: 3080, system: true },
+      { domain: "caddy.local", port: 3080, system: true, devMode: false },
     ]);
+  });
+
+  it("parses site without dev mode as devMode false", () => {
+    const content = `app.local {\n\treverse_proxy host.docker.internal:3000\n}\n`;
+    const sites = parseSites(content);
+    assert.deepStrictEqual(sites, [
+      { domain: "app.local", port: 3000, devMode: false },
+    ]);
+  });
+
+  it("parses site with header_up Host as devMode true", () => {
+    const content = [
+      "app.local {",
+      "\treverse_proxy host.docker.internal:3000 {",
+      "\t\theader_up Host localhost:3000",
+      "\t}",
+      "}",
+    ].join("\n");
+    const sites = parseSites(content);
+    assert.deepStrictEqual(sites, [
+      { domain: "app.local", port: 3000, devMode: true },
+    ]);
+  });
+
+  it("parses mix of dev-mode and non-dev-mode sites", () => {
+    const content = [
+      "app.local {",
+      "\treverse_proxy host.docker.internal:3000",
+      "}",
+      "",
+      "dev.local {",
+      "\treverse_proxy host.docker.internal:4000 {",
+      "\t\theader_up Host localhost:4000",
+      "\t}",
+      "}",
+    ].join("\n");
+    const sites = parseSites(content);
+    assert.equal(sites.length, 2);
+    assert.deepStrictEqual(sites[0], { domain: "app.local", port: 3000, devMode: false });
+    assert.deepStrictEqual(sites[1], { domain: "dev.local", port: 4000, devMode: true });
   });
 
   it("ignores global options block", () => {
