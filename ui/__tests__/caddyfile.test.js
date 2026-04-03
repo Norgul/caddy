@@ -114,6 +114,28 @@ describe("addSite", () => {
     assert.ok(result.includes("admin 0.0.0.0:2019"));
     assert.ok(result.includes("blog.local {"));
   });
+
+  it("adds site with devMode generates nested block", () => {
+    const original = `app.local {\n\treverse_proxy host.docker.internal:3000\n}\n`;
+    const result = addSite(original, "dev.local", 4000, true);
+    assert.ok(result.includes("dev.local {"));
+    assert.ok(result.includes("reverse_proxy host.docker.internal:4000 {"));
+    assert.ok(result.includes("header_up Host localhost:4000"));
+  });
+
+  it("adds site without devMode generates flat format", () => {
+    const original = `app.local {\n\treverse_proxy host.docker.internal:3000\n}\n`;
+    const result = addSite(original, "blog.local", 5000, false);
+    assert.ok(result.includes("reverse_proxy host.docker.internal:5000"));
+    assert.ok(!result.includes("header_up"));
+  });
+
+  it("adds site with devMode omitted defaults to flat format", () => {
+    const original = `app.local {\n\treverse_proxy host.docker.internal:3000\n}\n`;
+    const result = addSite(original, "blog.local", 5000);
+    assert.ok(result.includes("reverse_proxy host.docker.internal:5000"));
+    assert.ok(!result.includes("header_up"));
+  });
 });
 
 describe("removeSite", () => {

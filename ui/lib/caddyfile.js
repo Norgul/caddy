@@ -70,14 +70,27 @@ function parseSites(content) {
   return sites;
 }
 
-function addSite(content, domain, port) {
-  const block = [
-    "",
-    `${domain} {`,
-    `\treverse_proxy host.docker.internal:${port}`,
-    "}",
-    "",
-  ].join("\n");
+function addSite(content, domain, port, devMode) {
+  let block;
+  if (devMode) {
+    block = [
+      "",
+      `${domain} {`,
+      `\treverse_proxy host.docker.internal:${port} {`,
+      `\t\theader_up Host localhost:${port}`,
+      `\t}`,
+      "}",
+      "",
+    ].join("\n");
+  } else {
+    block = [
+      "",
+      `${domain} {`,
+      `\treverse_proxy host.docker.internal:${port}`,
+      "}",
+      "",
+    ].join("\n");
+  }
 
   return content.trimEnd() + "\n" + block;
 }
