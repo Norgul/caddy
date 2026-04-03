@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <title>Caddy Local</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -274,6 +275,69 @@
       color: rgba(239, 68, 68, 0.8);
     }
 
+    /* Dev mode checkbox row */
+    .add-form-options {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+    }
+    .checkbox-label input[type="checkbox"] {
+      accent-color: #8b5cf6;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .checkbox-hint {
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* Toggle switch for site cards */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .toggle.active {
+      background: rgba(139, 92, 246, 0.4);
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+    .toggle.active::after {
+      transform: translateX(16px);
+      background: rgba(255,255,255,0.9);
+    }
+    .dev-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      white-space: nowrap;
+    }
+
     /* Footer hint */
     .footer-hint {
       text-align: center;
@@ -315,19 +379,28 @@
 
     <div class="add-card">
       <div class="add-card-title">Add New Site</div>
-      <form class="add-form" id="add-form">
-        <div class="field">
-          <label>Domain</label>
-          <input type="text" id="domain" placeholder="my-app.local" required />
+      <form id="add-form">
+        <div class="add-form">
+          <div class="field">
+            <label>Domain</label>
+            <input type="text" id="domain" placeholder="my-app.local" required />
+          </div>
+          <div class="field field-small">
+            <label>Port</label>
+            <input type="text" id="port" placeholder="3000" required />
+          </div>
+          <button type="submit" class="btn-add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </button>
         </div>
-        <div class="field field-small">
-          <label>Port</label>
-          <input type="text" id="port" placeholder="3000" required />
+        <div class="add-form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="dev-mode" />
+            Dev server mode
+          </label>
+          <span class="checkbox-hint">Fixes "Invalid Host header" from webpack, Vite, etc.</span>
         </div>
-        <button type="submit" class="btn-add">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add
-        </button>
       </form>
     </div>
 
@@ -379,7 +452,9 @@
           <div class="site-actions">
             ${site.system
               ? '<span class="badge-system">system</span>'
-              : `<button class="btn-delete" onclick="deleteSite('${site.domain}')">Delete</button>`
+              : `<span class="dev-label">dev</span>
+                 <div class="toggle${site.devMode ? " active" : ""}" onclick="toggleDevMode('${site.domain}', ${!site.devMode})"></div>
+                 <button class="btn-delete" onclick="deleteSite('${site.domain}')">Delete</button>`
             }
           </div>
         </div>
@@ -391,12 +466,13 @@
       e.preventDefault();
       const domain = document.getElementById("domain").value;
       const port = document.getElementById("port").value;
+      const devMode = document.getElementById("dev-mode").checked;
 
       try {
         const res = await fetch("/api/sites", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ domain, port: parseInt(port, 10) }),
+          body: JSON.stringify({ domain, port: parseInt(port, 10), devMode }),
         });
 
         if (!res.ok) {
@@ -409,6 +485,7 @@
         renderSites();
         document.getElementById("domain").value = "";
         document.getElementById("port").value = "";
+        document.getElementById("dev-mode").checked = false;
       } catch (err) {
         showToast("Failed to add site");
       }
@@ -427,6 +504,26 @@
         renderSites();
       } catch (err) {
         showToast("Failed to delete site");
+      }
+    }
+
+    // Toggle dev mode
+    async function toggleDevMode(domain, devMode) {
+      try {
+        const res = await fetch(`/api/sites/${domain}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ devMode }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          showToast(data.error || "Failed to update site");
+          return;
+        }
+        sites = await res.json();
+        renderSites();
+      } catch (err) {
+        showToast("Failed to update site");
       }
     }
 
