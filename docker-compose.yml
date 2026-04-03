@@ -11,6 +11,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  caddy-ui:
+    build: ./ui
+    volumes:
+      - ./Caddyfile:/app/Caddyfile
+      - /etc/hosts:/app/hosts
+    depends_on:
+      - caddy
+
 volumes:
   caddy_data:
   caddy_config:
