@@ -129,4 +129,78 @@ function removeSite(content, domain) {
   return result.join("\n");
 }
 
-module.exports = { parseSites, addSite, removeSite };
+function updateSiteDevMode(content, domain, devMode) {
+  if (SYSTEM_DOMAINS.includes(domain)) {
+    throw new Error(`Cannot modify system domain: ${domain}`);
+  }
+
+  const lines = content.split("\n");
+  const result = [];
+  let found = false;
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    const siteMatch = line.match(/^([a-zA-Z0-9._-]+)\s*\{$/);
+
+    if (siteMatch && siteMatch[1] === domain) {
+      found = true;
+      result.push(lines[i]); // keep "domain {"
+      i++;
+
+      // Find the reverse_proxy line and extract port
+      let port = null;
+      while (i < lines.length && lines[i].trim() !== "}") {
+        const trimmed = lines[i].trim();
+
+        // Match nested: "reverse_proxy host:port {"
+        const blockMatch = trimmed.match(/^reverse_proxy\s+([\w._-]+):(\d+)\s*\{$/);
+        if (blockMatch) {
+          port = parseInt(blockMatch[2], 10);
+          i++;
+          // Skip sub-block contents
+          while (i < lines.length && lines[i].trim() !== "}") {
+            i++;
+          }
+          i++; // skip sub-block closing }
+          continue;
+        }
+
+        // Match flat: "reverse_proxy host:port"
+        const flatMatch = trimmed.match(/^reverse_proxy\s+([\w._-]+):(\d+)$/);
+        if (flatMatch) {
+          port = parseInt(flatMatch[2], 10);
+          i++;
+          continue;
+        }
+
+        i++;
+      }
+
+      // Write the new reverse_proxy block
+      if (devMode) {
+        result.push(`\treverse_proxy host.docker.internal:${port} {`);
+        result.push(`\t\theader_up Host localhost:${port}`);
+        result.push(`\t}`);
+      } else {
+        result.push(`\treverse_proxy host.docker.internal:${port}`);
+      }
+
+      // Push site closing }
+      result.push(lines[i]); // "}"
+      i++;
+      continue;
+    }
+
+    result.push(lines[i]);
+    i++;
+  }
+
+  if (!found) {
+    throw new Error(`Domain not found: ${domain}`);
+  }
+
+  return result.join("\n");
+}
+
+module.exports = { parseSites, addSite, removeSite, updateSiteDevMode };

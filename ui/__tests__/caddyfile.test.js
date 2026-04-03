@@ -1,6 +1,6 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
-const { parseSites, addSite, removeSite } = require("../lib/caddyfile");
+const { parseSites, addSite, removeSite, updateSiteDevMode } = require("../lib/caddyfile");
 
 describe("parseSites", () => {
   it("parses a Caddyfile with one site", () => {
@@ -159,5 +159,65 @@ describe("removeSite", () => {
     assert.throws(() => removeSite(content, "caddy.local"), {
       message: /system/i,
     });
+  });
+});
+
+describe("updateSiteDevMode", () => {
+  it("enables dev mode on a flat-format site", () => {
+    const content = [
+      "app.local {",
+      "\treverse_proxy host.docker.internal:3000",
+      "}",
+    ].join("\n");
+    const result = updateSiteDevMode(content, "app.local", true);
+    assert.ok(result.includes("reverse_proxy host.docker.internal:3000 {"));
+    assert.ok(result.includes("header_up Host localhost:3000"));
+  });
+
+  it("disables dev mode on a nested-block site", () => {
+    const content = [
+      "app.local {",
+      "\treverse_proxy host.docker.internal:3000 {",
+      "\t\theader_up Host localhost:3000",
+      "\t}",
+      "}",
+    ].join("\n");
+    const result = updateSiteDevMode(content, "app.local", false);
+    assert.ok(result.includes("reverse_proxy host.docker.internal:3000"));
+    assert.ok(!result.includes("header_up"));
+    assert.ok(!result.includes("reverse_proxy host.docker.internal:3000 {"));
+  });
+
+  it("throws on system domain", () => {
+    const content = `caddy.local {\n\treverse_proxy caddy-ui:3080\n}\n`;
+    assert.throws(() => updateSiteDevMode(content, "caddy.local", true), {
+      message: /system/i,
+    });
+  });
+
+  it("throws on non-existent domain", () => {
+    const content = `app.local {\n\treverse_proxy host.docker.internal:3000\n}\n`;
+    assert.throws(() => updateSiteDevMode(content, "missing.local", true), {
+      message: /not found/i,
+    });
+  });
+
+  it("preserves other sites unchanged", () => {
+    const content = [
+      "first.local {",
+      "\treverse_proxy host.docker.internal:3000",
+      "}",
+      "",
+      "second.local {",
+      "\treverse_proxy host.docker.internal:4000",
+      "}",
+    ].join("\n");
+    const result = updateSiteDevMode(content, "second.local", true);
+    // first.local unchanged
+    assert.ok(result.includes("first.local {"));
+    assert.ok(result.includes("reverse_proxy host.docker.internal:3000\n"));
+    // second.local updated
+    assert.ok(result.includes("reverse_proxy host.docker.internal:4000 {"));
+    assert.ok(result.includes("header_up Host localhost:4000"));
   });
 });
