@@ -1,2 +1,5 @@
 .superpowers/
 node_modules/
+docs/
+.caddy-hosts
+Caddyfile
