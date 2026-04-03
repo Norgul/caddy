@@ -1,4 +1,445 @@
 <!DOCTYPE html>
-<html><head><title>Caddy Local</title></head>
-<body><h1>Caddy Local</h1><p>Loading...</p></body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caddy Local</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0A0A0B;
+      color: white;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background blurs */
+    .bg-blur-1 {
+      position: fixed;
+      top: -10%;
+      left: 20%;
+      width: 500px;
+      height: 500px;
+      background: rgba(139, 92, 246, 0.08);
+      border-radius: 50%;
+      filter: blur(128px);
+      animation: pulse1 8s ease-in-out infinite;
+    }
+    .bg-blur-2 {
+      position: fixed;
+      bottom: -10%;
+      right: 15%;
+      width: 500px;
+      height: 500px;
+      background: rgba(99, 102, 241, 0.08);
+      border-radius: 50%;
+      filter: blur(128px);
+      animation: pulse2 8s ease-in-out infinite 2s;
+    }
+    .bg-blur-3 {
+      position: fixed;
+      top: 30%;
+      right: 30%;
+      width: 350px;
+      height: 350px;
+      background: rgba(217, 70, 239, 0.06);
+      border-radius: 50%;
+      filter: blur(96px);
+      animation: pulse1 8s ease-in-out infinite 4s;
+    }
+
+    @keyframes pulse1 {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    @keyframes pulse2 {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.05); }
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding-bottom: 8px;
+    }
+    .header-line {
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+      margin: 8px auto 12px;
+      max-width: 240px;
+    }
+    .header p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+    }
+
+    /* Add site card */
+    .add-card {
+      backdrop-filter: blur(40px);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .add-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .add-form {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .field {
+      flex: 1;
+    }
+    .field-small {
+      width: 110px;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 6px;
+      letter-spacing: 0.03em;
+    }
+    .field input {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .field input::placeholder {
+      color: rgba(255,255,255,0.15);
+    }
+    .field input:focus {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.08);
+    }
+    .btn-add {
+      padding: 12px 24px;
+      background: white;
+      color: #0A0A0B;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(255,255,255,0.1);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(255,255,255,0.15);
+    }
+    .btn-add svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Sites list */
+    .sites-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .sites-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sites-count {
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.03);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .site-card {
+      backdrop-filter: blur(40px);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    .site-card:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.08);
+    }
+    .site-card.system {
+      opacity: 0.5;
+    }
+    .site-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .site-domain {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.85);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .site-domain .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+    .site-upstream {
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .site-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-system {
+      font-size: 10px;
+      color: rgba(255,255,255,0.25);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .btn-delete {
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+      color: rgba(239, 68, 68, 0.8);
+    }
+
+    /* Footer hint */
+    .footer-hint {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.15);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      backdrop-filter: blur(20px);
+      border-radius: 10px;
+      padding: 12px 20px;
+      color: rgba(239, 68, 68, 0.9);
+      font-size: 13px;
+      z-index: 100;
+      display: none;
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-blur-1"></div>
+  <div class="bg-blur-2"></div>
+  <div class="bg-blur-3"></div>
+
+  <div class="container">
+    <div class="header">
+      <h1>Caddy Local</h1>
+      <div class="header-line"></div>
+      <p>Manage your local development domains</p>
+    </div>
+
+    <div class="add-card">
+      <div class="add-card-title">Add New Site</div>
+      <form class="add-form" id="add-form">
+        <div class="field">
+          <label>Domain</label>
+          <input type="text" id="domain" placeholder="my-app.local" required />
+        </div>
+        <div class="field field-small">
+          <label>Port</label>
+          <input type="text" id="port" placeholder="3000" required />
+        </div>
+        <button type="submit" class="btn-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add
+        </button>
+      </form>
+    </div>
+
+    <div class="sites-header">
+      <div class="sites-title">Active Sites</div>
+      <div class="sites-count" id="sites-count">0 sites</div>
+    </div>
+
+    <div id="sites-list"></div>
+
+    <div class="footer-hint">
+      All domains automatically get HTTPS via Caddy's local CA
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // State
+    let sites = [];
+
+    // Load sites on page load
+    async function loadSites() {
+      try {
+        const res = await fetch("/api/sites");
+        if (!res.ok) { showToast("Failed to load sites"); return; }
+        sites = await res.json();
+        renderSites();
+      } catch (err) {
+        showToast("Failed to load sites");
+      }
+    }
+
+    // Render sites list
+    function renderSites() {
+      const list = document.getElementById("sites-list");
+      const count = document.getElementById("sites-count");
+      count.textContent = `${sites.length} site${sites.length !== 1 ? "s" : ""}`;
+
+      list.innerHTML = sites.map(site => `
+        <div class="site-card${site.system ? " system" : ""}">
+          <div class="site-info">
+            <div class="site-domain">
+              <span class="dot"></span>
+              ${site.domain}
+            </div>
+            <div class="site-upstream">\u2192 host.docker.internal:${site.port}</div>
+          </div>
+          <div class="site-actions">
+            ${site.system
+              ? '<span class="badge-system">system</span>'
+              : `<button class="btn-delete" onclick="deleteSite('${site.domain}')">Delete</button>`
+            }
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Add site
+    document.getElementById("add-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const domain = document.getElementById("domain").value;
+      const port = document.getElementById("port").value;
+
+      try {
+        const res = await fetch("/api/sites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain, port: parseInt(port, 10) }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          showToast(data.error || "Failed to add site");
+          return;
+        }
+
+        sites = await res.json();
+        renderSites();
+        document.getElementById("domain").value = "";
+        document.getElementById("port").value = "";
+      } catch (err) {
+        showToast("Failed to add site");
+      }
+    });
+
+    // Delete site
+    async function deleteSite(domain) {
+      try {
+        const res = await fetch(`/api/sites/${domain}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json();
+          showToast(data.error || "Failed to delete site");
+          return;
+        }
+        sites = await res.json();
+        renderSites();
+      } catch (err) {
+        showToast("Failed to delete site");
+      }
+    }
+
+    // Toast
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 4000);
+    }
+
+    // Init
+    loadSites();
+  </script>
+</body>
 </html>
